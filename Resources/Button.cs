@@ -17,4 +17,12 @@ public class Button
     public static string DeleteAddress => "btn.locations.delete";
     public static string ContactUpdate => "btn.contact.update";
     public static string ContactRequest => "btn.contact.request";
+    public static string Food => "category.1";
+    public static string Salad => "category.4";
+    public static string Snack => "category.2";
+    public static string Drink => "category.3";
+    public static string Set => "category.5"; 
+
+    public static string Category => "Category";
+
 }

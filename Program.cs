@@ -31,6 +31,7 @@ builder.Services.AddTransient<IBotResponseService, BotResponseService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<ILocalizationHandler, LocalizationHandler>();
 builder.Services.AddTransient<IUpdateHandler, UpdateHandler>();
+builder.Services.AddTransient<IProductService, ProductService>();
 builder.Services.AddHostedService<BotStartingBackgroundService>();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ITelegramBotClient, TelegramBotClient>(

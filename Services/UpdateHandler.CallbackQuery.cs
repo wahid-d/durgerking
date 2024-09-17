@@ -10,6 +10,8 @@ public partial class UpdateHandler
     {
         var task = query.Data switch
         {
+            _ when query.Data == Button.Menu
+                => responseService.SendMenuAsync(query.Message.Chat.Id, cancellationToken).AsTask(),
             _ when query.Data == Button.Settings
                 => responseService.SendSettingsAsync(query.Message.Chat.Id, cancellationToken).AsTask(),
             _ when query.Data == Button.LanguageSettings
@@ -28,6 +30,10 @@ public partial class UpdateHandler
                 => responseService.SendContactAsync(query.Message.Chat.Id, query.From.Id, cancellationToken).AsTask(),
             _ when query.Data == Button.ContactUpdate
                 => responseService.SendContactRequestAsync(query.Message.Chat.Id, cancellationToken).AsTask(),
+            _ when query.Data == Button.Category
+                => responseService.SendCategoriesAsync(query.Message.Chat.Id, cancellationToken).AsTask(),
+            _ when query.Data == Category.Food
+                => responseService.SendFoodAsync(query.Message.Chat.Id, cancellationToken).AsTask(),     
             _ => throw new NotImplementedException($"Call back query {query.Data} not supported!")
         };
 

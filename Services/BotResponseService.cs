@@ -3,6 +3,8 @@ using DurgerKing.Resources;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using DurgerKing.Extensions;
+using DurgerKing.Models;
 
 namespace DurgerKing.Services;
 
@@ -12,17 +14,20 @@ public class BotResponseService : IBotResponseService
     private readonly IUserService userService;
     private readonly ILocalizationHandler localization;
     private readonly ITelegramBotClient botClient;
+    private readonly IProductService productService ;
 
     public BotResponseService(
         ILogger<BotResponseService> logger,
         IUserService userService,
         ILocalizationHandler localization,
-        ITelegramBotClient botClient)
+        ITelegramBotClient botClient,
+        IProductService productService)
     {
         this.logger = logger;
         this.userService = userService;
         this.localization = localization;
         this.botClient = botClient;
+        this.productService = productService;
     }
 
     public async ValueTask<(long ChatId, long MessageId)> SendGreetingAsync(
@@ -239,6 +244,167 @@ public class BotResponseService : IBotResponseService
         return (chatId, message.MessageId);
     }
 
+    public async ValueTask<(long ChatId, long MessageId)> SendMenuAsync(
+    long chatId,
+    CancellationToken cancellationToken = default)
+    {
+        var keyboardMatrix = new[]
+        {
+            new[] { Button.Food, Button.Salad },
+            new[] { Button.Snack, Button.Drink },
+            new[] { Button.Set },
+        };
+
+        var message = await botClient.SendTextMessageAsync(
+            text: $"_{localization.GetValue(Button.Settings)}_",
+            chatId: chatId,
+            replyMarkup: GetInlineKeyboard(keyboardMatrix),
+            parseMode: ParseMode.Markdown,
+            cancellationToken: cancellationToken);
+
+        return (chatId, message.MessageId);
+    }
+
+    public async ValueTask <(long ChatId, long MessageId)> SendCategoriesAsync(
+        long chatId,
+        CancellationToken cancellationToken = default)
+    {
+        var categoryDb = await productService.GetCategoriesAsync(cancellationToken);
+
+        var categories = categoryDb.Select(p => $"category.{p.Id}");
+
+        var row = (int)Math.Ceiling((double)categories.Count() / 2);
+        var categoryMatrix = Enumerable.Range(0, row)
+            .Select(a => categories.Skip(a * 2).Take(2).ToArray()).ToArray();
+
+        var message = await botClient.SendTextMessageAsync(
+            text: $"_{"Categories"}_",
+            chatId: chatId,
+            replyMarkup: GetInlineKeyboard(categoryMatrix),
+            parseMode: ParseMode.Markdown,
+            cancellationToken: cancellationToken);
+
+        return (chatId, message.MessageId);
+    }
+
+    public async ValueTask<(long ChatId, long MessageId)> SendFoodAsync(
+        long chatId, 
+        CancellationToken cancellationToken = default)
+    {
+        var products = await productService.GetProductsAsync(1, cancellationToken);
+
+        var keyboardMatrix = new[]
+        {
+            new[] {"1", "2", "3", "4", "5", "6", "7", "8", "9"}
+        };
+
+        var product = products.FirstOrDefault();
+
+        var message = await botClient.SendTextMessageAsync(
+            text: $"name: {product.Name}\nprice: {product.Price}",
+            chatId: chatId,
+            replyMarkup: GetInlineKeyboardPagination(keyboardMatrix),
+            parseMode: ParseMode.Markdown,
+            cancellationToken: cancellationToken);
+
+        return (chatId, message.MessageId);
+    }
+
+    private InlineKeyboardMarkup GetInlineKeyboardPagination(string[][] matrix)
+    {
+        var buttonLength = matrix[0].Length;
+        string[][] newMatrix = new string[1][];
+
+        if(buttonLength > 4)
+        {
+            newMatrix[0] = new string[5];
+            matrix[0][buttonLength - (buttonLength - 4)] = ">>";
+            for(int i = 0; i < buttonLength; i++)
+            {
+                newMatrix[0][i] = matrix[0][i];
+                if(matrix[0][i].Equals(">>"))
+                    break;
+            }
+        }
+        else if(buttonLength <= 4)
+        {
+            newMatrix[0] = new string[buttonLength];
+            for(int i = 0; i < buttonLength; i++)
+            {
+                newMatrix[0][i] = matrix[0][i];
+            }
+        }
+        
+        var buttonMatrix = new InlineKeyboardButton[newMatrix.GetLength(0)][];
+        for(int i = 0; i < newMatrix.GetLength(0); i++)
+            buttonMatrix[i] = newMatrix[i]
+                .Select(x => InlineKeyboardButton.WithCallbackData(localization.GetValue(x), x)).ToArray();
+        
+        return new InlineKeyboardMarkup(buttonMatrix);
+    }
+
+    public async ValueTask<(long ChatId, long MessageId)> SendSnackAsync(
+        long chatId,
+        int messageId,
+        string clickedNavigation, 
+        CancellationToken cancellationToken = default)
+    {
+        // List<MenuButtonModel> buttonModels = new List<MenuButtonModel>();
+        var products = await productService.GetProductsAsync(1, cancellationToken);
+
+        // foreach (var item in products)
+        // {
+        //     buttonModels.Add(new MenuButtonModel(item.Name, item.Id.ToString()));
+        // }
+        Console.WriteLine("------------------------------------------------------------------");
+        Console.WriteLine(clickedNavigation);
+        Console.WriteLine("------------------------------------------------------------------");
+
+        List<MenuButtonModel> buttonModels = new()
+        {
+            new MenuButtonModel("Button11", "Button11Value"),
+            new MenuButtonModel("Button21", "Button21Value"),
+            new MenuButtonModel("Button31", "Button31Value"),
+            new MenuButtonModel("Button41", "Button41Value"),
+            new MenuButtonModel("Button51", "Button51Value"), 
+            new MenuButtonModel("Button61", "Button61Value"),
+            new MenuButtonModel("Button71", "Button71Value"),
+            new MenuButtonModel("Button81", "Button81Value"),
+            new MenuButtonModel("Button91", "Button91Value"),
+        };
+
+        const int column = 2;
+        const int row = 2;
+        if(clickedNavigation.Contains("toPage"))
+        {
+            var replyMenu = botClient.GetPaginationInlineKeyboard(buttonModels, column, row, clickedNavigation);
+            var product = products.FirstOrDefault();
+
+            var message = await botClient.SendTextMessageAsync(
+                text: $"name: {product.Name}\nprice: {product.Price}",
+                chatId: chatId,
+                replyMarkup: replyMenu,
+                parseMode: ParseMode.Markdown,
+                cancellationToken: cancellationToken);
+
+            return (chatId, message.MessageId);
+        }
+        else
+        {
+            var replyMenu = botClient.GetPaginationInlineKeyboard(buttonModels, column, row);
+            var product = products.FirstOrDefault();
+
+            var message = await botClient.SendTextMessageAsync(
+                text: $"name: {product.Name}\nprice: {product.Price}",
+                chatId: chatId,
+                replyMarkup: replyMenu,
+                parseMode: ParseMode.Markdown,
+                cancellationToken: cancellationToken);
+
+            return (chatId, message.MessageId);
+        }
+    }
+    
     private async ValueTask RemoveKeyboardAsync(long chatId, CancellationToken cancellationToken = default)
     {
         var message = await botClient.SendTextMessageAsync(
@@ -248,6 +414,7 @@ public class BotResponseService : IBotResponseService
             cancellationToken: cancellationToken);
         await botClient.DeleteMessageAsync(chatId, message.MessageId, cancellationToken: cancellationToken);
     }
+
 
     private InlineKeyboardMarkup GetInlineKeyboard(string[][] matrix)
     {

@@ -2,6 +2,8 @@ namespace DurgerKing.Entity;
 
 public class Product
 {
+    internal int categoryId;
+
     public Guid Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
