@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using DurgerKing.Dtos;
 using DurgerKing.Data;
 using Durgerking.Filters;
+using Durgerking.Interfaces;
 using DurgerKing.Services;
 using durgerking.Validators;
 using FluentValidation;
@@ -31,6 +32,7 @@ builder.Services.AddTransient<IBotResponseService, BotResponseService>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<ILocalizationHandler, LocalizationHandler>();
 builder.Services.AddTransient<IUpdateHandler, UpdateHandler>();
+builder.Services.AddSingleton<IDeleteMessageListService, DeleteMessageListService>();
 builder.Services.AddHostedService<BotStartingBackgroundService>();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ITelegramBotClient, TelegramBotClient>(
